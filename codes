@@ -1,0 +1,424 @@
+DL1_Linear_Regression_House_Price_Prediction:
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error
+
+print("--- Problem 1: House Price Prediction ---")
+# 1. Load Data
+df = pd.read_csv('USA_Housing.csv')
+
+# Drop address if it exists, keep only numeric features
+X = df.drop(columns=['Price'], errors='ignore') 
+# Select only numeric columns just in case there are text fields like Address
+X = X.select_dtypes(include=['float64', 'int64']) 
+y = df['Price']
+
+# 2. Split Data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 3. Train Linear Regression Model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# 4. Predict & Evaluate
+y_pred = model.predict(X_test)
+print(f"Model Accuracy (R2 Score): {r2_score(y_test, y_pred) * 100:.2f}%")
+print("\nSample Predictions:")
+for i in range(3):
+    print(f"Predicted: ${y_pred[i]:,.2f} | Actual: ${y_test.iloc[i]:,.2f}")
+
+
+
+
+================================================================
+
+
+
+DL2_Multiclass_Classifier_CNN:
+
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import confusion_matrix
+
+print("--- Problem 2: CNN on MNIST ---")
+
+# a. Perform Data Pre-processing
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train = X_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+X_test = X_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+y_train_cat = to_categorical(y_train, 10)
+y_test_cat = to_categorical(y_test, 10)
+
+# b. Define Model and perform training
+model = Sequential([
+    Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)),
+    MaxPooling2D(pool_size=(2, 2)),
+    Flatten(),
+    Dense(64, activation='relu'),
+    Dense(10, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+print("Training Model (2 Epochs for speed)...")
+model.fit(X_train, y_train_cat, epochs=2, batch_size=128, validation_split=0.1, verbose=1)
+
+# c. Evaluate Results using confusion matrix
+y_pred = np.argmax(model.predict(X_test), axis=1)
+cm = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+plt.title("Confusion Matrix - MNIST CNN")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+
+
+
+=================================================================
+
+
+
+
+DL3_Sentiment_Prediction_by_LSTM:
+
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+
+print("--- Problem 3: Sentiment Prediction (LSTM) ---")
+
+# a. Select suitable dataset: IMDB Movie Reviews
+max_features = 10000  # Use top 10,000 words
+maxlen = 100          # Limit reviews to 100 words
+
+(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=max_features)
+X_train = pad_sequences(X_train, maxlen=maxlen)
+X_test = pad_sequences(X_test, maxlen=maxlen)
+
+# b. Apply for prediction
+model = Sequential([
+    Embedding(input_dim=max_features, output_dim=128, input_length=maxlen),
+    LSTM(64, dropout=0.2), # LSTM Variant chosen
+    Dense(1, activation='sigmoid')
+])
+
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+print("Training LSTM...")
+model.fit(X_train, y_train, epochs=2, batch_size=128, validation_data=(X_test, y_test), verbose=1)
+
+loss, acc = model.evaluate(X_test, y_test, verbose=0)
+print(f"Final Test Accuracy: {acc * 100:.2f}%")
+
+
+
+
+================================================================
+
+
+
+
+DL4_CNN_Image_Classification:
+
+from tensorflow.keras.datasets import cifar10
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import to_categorical
+
+print("--- Problem 4: Optimized CNN for Image Classification ---")
+
+# a. Select suitable dataset: CIFAR-10 (Colored images of planes, cars, birds, etc.)
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
+X_train, X_test = X_train / 255.0, X_test / 255.0
+y_train, y_test = to_categorical(y_train, 10), to_categorical(y_test, 10)
+
+# b. Optimized with different hyperparameters 
+model = Sequential([
+    # Hyperparameter: Filter size = 3x3, No. of Layers = 2 Conv Blocks
+    Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(32, 32, 3)), 
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.2), # Hyperparameter: Dropout
+    
+    Conv2D(64, kernel_size=(3, 3), activation='relu'), 
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.3), # Hyperparameter: Dropout
+    
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.4),
+    Dense(10, activation='softmax')
+])
+
+# Hyperparameter: Custom Optimizer & Learning Rate (0.001)
+custom_optimizer = Adam(learning_rate=0.001)
+
+model.compile(optimizer=custom_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+
+print("Training Hyper-Optimized CNN...")
+model.fit(X_train, y_train, epochs=5, batch_size=64, validation_split=0.2, verbose=1)
+
+loss, acc = model.evaluate(X_test, y_test, verbose=0)
+print(f"Optimized Model Accuracy: {acc * 100:.2f}%")
+
+
+
+
+=================================================================
+
+
+
+
+DL5_RNN_Sentiment_Analysis:
+
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, SimpleRNN, Dense
+
+print("--- Problem 5: Sentiment Analysis (Simple RNN) ---")
+
+max_features = 5000 
+maxlen = 50          
+
+# Load Data
+(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=max_features)
+X_train = pad_sequences(X_train, maxlen=maxlen)
+X_test = pad_sequences(X_test, maxlen=maxlen)
+
+# Build Simple RNN Computational Graph
+model = Sequential([
+    Embedding(input_dim=max_features, output_dim=64, input_length=maxlen),
+    SimpleRNN(32, return_sequences=False), # Explicitly using RNN
+    Dense(1, activation='sigmoid')
+])
+
+# RMSprop is generally a highly stable optimizer for basic RNNs
+model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
+
+print("Training Simple RNN Sentiment Analyzer...")
+model.fit(X_train, y_train, epochs=3, batch_size=64, validation_data=(X_test, y_test), verbose=1)
+
+loss, acc = model.evaluate(X_test, y_test, verbose=0)
+print(f"RNN Sentiment Accuracy: {acc * 100:.2f}%")
+
+
+
+
+========================================================
+
+
+
+
+BI6_Import_Data:
+
+cell 1:
+%pip install pymysql
+%pip install sqlalchemy
+
+cell2:
+import pandas as pd
+from sqlalchemy import create_engine
+
+print("--- Extracting Data from Excel ---")
+df = pd.read_excel('sales_data.xlsx')
+df = df.fillna(0)
+
+# Filter only the columns we actually want
+df_to_insert = df[['COUNTRY', 'QUANTITYORDERED', 'PRICEEACH']]
+
+# Rename them so they look clean in your SQL Database
+df_to_insert.columns = ['Region', 'Quantity', 'Price']
+print(df_to_insert.head())
+
+print("\n--- Connecting to MySQL and Loading Data ---")
+# Create connection engine using pure-Python pymysql
+# FORMAT: mysql+pymysql://username:password@localhost/database_name
+engine = create_engine('mysql+pymysql://root:root@localhost/cl4')
+
+# This single line handles table creation AND inserts all rows automatically.
+df_to_insert.to_sql(name='SalesData12', con=engine, if_exists='replace', index=False)
+
+print("Success: Data loaded into MySQL database safely!")
+
+
+
+
+
+===================================================================
+
+
+
+
+BI7_Data_Visualization:
+
+cell 1:
+%pip install pymysql
+%pip install sqlalchemy
+
+cell2:
+import pandas as pd
+from sqlalchemy import create_engine
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+print("--- Starting Assignment 2: ETL + Visualization (MySQL) ---")
+
+# 1. Extract
+print("Extracting Data...")
+# Simulating a CSV read using a dictionary for instant runnability
+data = {
+    'Order_Date': ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-01'],
+    'Region': ['North', 'South', 'North', 'East'],
+    'Quantity': [10, 5, 8, 12],
+    'Price': [100, 200, 150, 120]
+}
+df = pd.DataFrame(data)
+
+# 2. Transform
+print("Transforming Data...")
+df['Order_Date'] = pd.to_datetime(df['Order_Date'])
+df['Total_Sales'] = df['Quantity'] * df['Price']
+df = df.dropna()
+
+# 3. Load to MySQL
+print("Loading to MySQL Database...")
+# Format: mysql+pymysql://username:password@localhost/database_name
+engine = create_engine('mysql+pymysql://root:root@localhost/cl4') 
+df.to_sql(name='sales_visual_data', con=engine, if_exists='replace', index=False)
+print("Success: Data loaded into MySQL!")
+
+# 4. Visualize
+print("Generating Visualization...")
+sns.barplot(x='Region', y='Total_Sales', data=df, errorbar=None, palette="viridis")
+plt.title('Total Sales by Region')
+plt.ylabel('Total Sales ($)')
+plt.show()
+
+
+
+
+==============================================================
+
+
+
+BI8_ETL:
+
+cell 1:
+%pip install pymysql
+%pip install sqlalchemy
+
+cell2:
+import pandas as pd
+from sqlalchemy import create_engine
+
+print("--- Starting Assignment 3: ETL for Customer_Data ---")
+
+# 1. Extract
+print("Extracting Data from Customer_Data.csv...")
+df = pd.read_csv('Customer_Data.csv')
+print(df.head(10))
+print(f"Successfully extracted {len(df)} records.")
+
+# 2. Transform
+print("Cleaning and Transforming Data...")
+
+# Handle missing values (e.g., the MINIMUM_PAYMENTS column has NaNs)
+df = df.fillna(0)
+
+# Create a derived/calculated column (Adding Purchase Transactions and Cash Advance Transactions)
+df['TOTAL_TRANSACTIONS'] = df['PURCHASES_TRX'] + df['CASH_ADVANCE_TRX']
+
+# Round all financial columns to 2 decimal places for cleaner database storage
+df = df.round(2)
+
+# 3. Load
+print("Loading into MySQL Database...")
+# Format: mysql+pymysql://username:password@localhost/database_name
+# (Note: If your professor strictly wants SQL Server, you can just change this string to: 'mssql+pymssql://user:pass@localhost/db_name')
+engine = create_engine('mysql+pymysql://root:root@localhost/cl4') 
+
+# Load the transformed data into a new table called 'Customer_Data_ETL'
+df.to_sql(name='Customer_Data_ETL2', con=engine, if_exists='replace', index=False)
+
+print("Success: Data loaded safely! You can now open Power BI -> 'Get Data' -> MySQL to build your Dashboard.")
+
+
+
+
+
+=================================================================
+
+
+
+
+
+BI10_Heart:
+
+cell 1:
+%pip install pymysql
+%pip install sqlalchemy
+
+cell2:
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+print("--- Starting Assignment 5: Data Classification ---")
+
+# 1. Load Data
+print("Loading 'heart.csv' dataset...")
+df = pd.read_csv('heart.csv')
+print(f"Dataset loaded successfully with {df.shape[0]} rows and {df.shape[1]} columns.\n")
+
+# 2. Preprocess
+# Handle missing values (though your dataset is clean, it's good practice)
+df.dropna(inplace=True)
+
+# Separate features (X) and target (y)
+X = df.drop(columns=["target"])
+y = df["target"]
+
+# Standardize numerical features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Split data into training and testing sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# 3. Apply Classification Algorithm (Logistic Regression)
+print("Training Logistic Regression Model...")
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Predict outcomes
+y_pred = model.predict(X_test)
+
+# 4. Evaluate the Model
+print(f"\nAccuracy Score: {accuracy_score(y_test, y_pred):.2f}\n")
+print("Classification Report:")
+print(classification_report(y_test, y_pred))
+
+# 5. Visualize Confusion Matrix
+conf_matrix = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(6, 4))
+sns.heatmap(conf_matrix, annot=True, cmap="Blues", fmt="d", cbar=False)
+plt.xlabel("Predicted Label")
+plt.ylabel("Actual Label")
+plt.title("Confusion Matrix - Heart Disease Classification")
+plt.show()
